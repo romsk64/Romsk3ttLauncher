@@ -6,6 +6,7 @@
 #include <QTreeView>
 #include <QVBoxLayout>
 #include "Application.h"
+#include "settings/SettingsObject.h"
 #include "BuildConfig.h"
 #include "settings/Setting.h"
 #include "translations/TranslationsModel.h"
@@ -62,7 +63,7 @@ void LanguageSelectionWidget::retranslate()
     QString text = tr("Don't see your language or the quality is poor?<br/><a href=\"%1\">Help us with translations!</a>")
                        .arg(BuildConfig.TRANSLATIONS_URL);
     helpUsLabel->setText(text);
-    formatCheckbox->setText(tr("Use system locales"));
+    formatCheckbox->setText(tr("Use system regional standards"));
 }
 
 void LanguageSelectionWidget::languageRowChanged(const QModelIndex& current, const QModelIndex& previous)

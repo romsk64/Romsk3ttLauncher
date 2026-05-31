@@ -75,9 +75,6 @@ set(CORE_SOURCES
     # RW lock protected map
     RWStorage.h
 
-    # A variable that has an implicit default value and keeps track of changes
-    DefaultVariable.h
-
     # a smart pointer wrapper intended for safer use with Qt signal/slot mechanisms
     QObjectPtr.h
 
@@ -110,9 +107,9 @@ if (UNIX AND NOT CYGWIN AND NOT APPLE)
     set(CORE_SOURCES
     ${CORE_SOURCES}
 
-    # MangoHud
-    MangoHud.h
-    MangoHud.cpp
+    # LibraryUtils
+    LibraryUtils.h
+    LibraryUtils.cpp
     )
 endif()
 
@@ -247,8 +244,6 @@ set(MINECRAFT_SOURCES
     minecraft/auth/steps/MSAStep.h
     minecraft/auth/steps/XboxAuthorizationStep.cpp
     minecraft/auth/steps/XboxAuthorizationStep.h
-    minecraft/auth/steps/XboxProfileStep.cpp
-    minecraft/auth/steps/XboxProfileStep.h
     minecraft/auth/steps/XboxUserStep.cpp
     minecraft/auth/steps/XboxUserStep.h
 
@@ -265,6 +260,8 @@ set(MINECRAFT_SOURCES
     minecraft/launch/ClaimAccount.h
     minecraft/launch/CreateGameFolders.cpp
     minecraft/launch/CreateGameFolders.h
+    minecraft/launch/EnsureAvailableMemory.cpp
+    minecraft/launch/EnsureAvailableMemory.h
     minecraft/launch/EnsureOfflineLibraries.cpp
     minecraft/launch/EnsureOfflineLibraries.h
     minecraft/launch/ModMinecraftJar.cpp
@@ -802,6 +799,8 @@ SET(LAUNCHER_SOURCES
     ApplicationMessage.cpp
     SysInfo.h
     SysInfo.cpp
+    HardwareInfo.cpp
+    HardwareInfo.h
 
     # console utils
     console/Console.h
@@ -817,23 +816,6 @@ SET(LAUNCHER_SOURCES
     # Super secret!
     KonamiCode.h
     KonamiCode.cpp
-
-    # Bundled resources
-    resources/backgrounds/backgrounds.qrc
-    resources/multimc/multimc.qrc
-    resources/pe_dark/pe_dark.qrc
-    resources/pe_light/pe_light.qrc
-    resources/pe_colored/pe_colored.qrc
-    resources/pe_blue/pe_blue.qrc
-    resources/breeze_dark/breeze_dark.qrc
-    resources/breeze_light/breeze_light.qrc
-    resources/OSX/OSX.qrc
-    resources/iOS/iOS.qrc
-    resources/flat/flat.qrc
-    resources/flat_white/flat_white.qrc
-    resources/documents/documents.qrc
-    resources/shaders/shaders.qrc
-    "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 
     # Icons
     icons/MMCIcon.h
@@ -904,6 +886,7 @@ SET(LAUNCHER_SOURCES
     ui/themes/CatPainter.h
 
     # Processes
+    LaunchMode.h
     LaunchController.h
     LaunchController.cpp
 
@@ -1084,6 +1067,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/ImportResourceDialog.h
     ui/dialogs/MSALoginDialog.cpp
     ui/dialogs/MSALoginDialog.h
+    ui/dialogs/NetworkJobFailedDialog.cpp
+    ui/dialogs/NetworkJobFailedDialog.h
     ui/dialogs/NewComponentDialog.cpp
     ui/dialogs/NewComponentDialog.h
     ui/dialogs/NewInstanceDialog.cpp
@@ -1221,77 +1206,6 @@ if(WIN32)
     )
 endif()
 
-qt_wrap_ui(LAUNCHER_UI
-    ui/MainWindow.ui
-    ui/setupwizard/PasteWizardPage.ui
-    ui/setupwizard/AutoJavaWizardPage.ui
-    ui/setupwizard/LoginWizardPage.ui
-    ui/pages/global/AccountListPage.ui
-    ui/pages/global/JavaPage.ui
-    ui/pages/global/LauncherPage.ui
-    ui/pages/global/APIPage.ui
-    ui/pages/global/ProxyPage.ui
-    ui/pages/global/ExternalToolsPage.ui
-    ui/pages/instance/ExternalResourcesPage.ui
-    ui/pages/instance/NotesPage.ui
-    ui/pages/instance/LogPage.ui
-    ui/pages/instance/ServersPage.ui
-    ui/pages/instance/OtherLogsPage.ui
-    ui/pages/instance/VersionPage.ui
-    ui/pages/instance/ManagedPackPage.ui
-    ui/pages/instance/WorldListPage.ui
-    ui/pages/instance/ScreenshotsPage.ui
-    ui/pages/modplatform/atlauncher/AtlOptionalModDialog.ui
-    ui/pages/modplatform/atlauncher/AtlPage.ui
-    ui/pages/modplatform/CustomPage.ui
-    ui/pages/modplatform/ResourcePage.ui
-    ui/pages/modplatform/flame/FlamePage.ui
-    ui/pages/modplatform/legacy_ftb/Page.ui
-    ui/pages/modplatform/import_ftb/ImportFTBPage.ui
-    ui/pages/modplatform/ImportPage.ui
-    ui/pages/modplatform/OptionalModDialog.ui
-    ui/pages/modplatform/ftb/FtbPage.ui
-    ui/pages/modplatform/modrinth/ModrinthPage.ui
-    ui/pages/modplatform/technic/TechnicPage.ui
-    ui/widgets/CustomCommands.ui
-    ui/widgets/EnvironmentVariables.ui
-    ui/widgets/InfoFrame.ui
-    ui/widgets/ModFilterWidget.ui
-    ui/widgets/SubTaskProgressBar.ui
-    ui/widgets/AppearanceWidget.ui
-    ui/widgets/MinecraftSettingsWidget.ui
-    ui/widgets/JavaSettingsWidget.ui
-    ui/dialogs/CopyInstanceDialog.ui
-    ui/dialogs/CreateShortcutDialog.ui
-    ui/dialogs/ProfileSetupDialog.ui
-    ui/dialogs/ProgressDialog.ui
-    ui/dialogs/NewInstanceDialog.ui
-    ui/dialogs/NewComponentDialog.ui
-    ui/dialogs/NewsDialog.ui
-    ui/dialogs/ProfileSelectDialog.ui
-    ui/dialogs/ExportInstanceDialog.ui
-    ui/dialogs/ExportPackDialog.ui
-    ui/dialogs/ExportToModListDialog.ui
-    ui/dialogs/IconPickerDialog.ui
-    ui/dialogs/ImportResourceDialog.ui
-    ui/dialogs/MSALoginDialog.ui
-    ui/dialogs/AboutDialog.ui
-    ui/dialogs/ReviewMessageBox.ui
-    ui/dialogs/ScrollMessageBox.ui
-    ui/dialogs/BlockedModsDialog.ui
-    ui/dialogs/ChooseProviderDialog.ui
-    ui/dialogs/skins/SkinManageDialog.ui
-    ui/dialogs/ChooseOfflineNameDialog.ui
-)
-
-qt_wrap_ui(PRISM_UPDATE_UI
-    ui/dialogs/UpdateAvailableDialog.ui
-)
-
-if (NOT Apple)
-    set (LAUNCHER_UI ${LAUNCHER_UI} ${PRISM_UPDATE_UI})
-endif()
-
 qt_add_resources(LAUNCHER_RESOURCES
     resources/backgrounds/backgrounds.qrc
     resources/multimc/multimc.qrc
@@ -1304,23 +1218,16 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/OSX/OSX.qrc
     resources/iOS/iOS.qrc
     resources/flat/flat.qrc
+    resources/flat_white/flat_white.qrc
     resources/documents/documents.qrc
     resources/shaders/shaders.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
-)
-
-qt_wrap_ui(PRISMUPDATER_UI
-    updater/prismupdater/SelectReleaseDialog.ui
-    ui/widgets/SubTaskProgressBar.ui
-    ui/dialogs/ProgressDialog.ui
 )
 
 ######## Windows resource files ########
 if(WIN32)
     set(LAUNCHER_RCS ${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_WindowsRC})
 endif()
-
-include(CompilerWarnings)
 
 ######## Precompiled Headers ###########
 
@@ -1336,11 +1243,7 @@ endif()
 ####### Targets ########
 
 # Add executable
-add_library(Launcher_logic STATIC ${LOGIC_SOURCES} ${LAUNCHER_SOURCES} ${LAUNCHER_UI} ${LAUNCHER_RESOURCES})
-set_project_warnings(Launcher_logic
-    "${Launcher_MSVC_WARNINGS}"
-    "${Launcher_CLANG_WARNINGS}"
-    "${Launcher_GCC_WARNINGS}")
+add_library(Launcher_logic STATIC ${LOGIC_SOURCES} ${LAUNCHER_SOURCES} ${LAUNCHER_RESOURCES})
 target_include_directories(Launcher_logic PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(Launcher_logic PUBLIC LAUNCHER_APPLICATION)
 
@@ -1425,8 +1328,6 @@ if(APPLE)
     endif()
 endif()
 
-target_link_libraries(Launcher_logic)
-
 add_executable(${Launcher_Name} MACOSX_BUNDLE WIN32 main.cpp ${LAUNCHER_RCS})
 
 if(${Launcher_USE_PCH})
@@ -1462,7 +1363,7 @@ endif()
 
 if(Launcher_BUILD_UPDATER)
     # Updater
-    add_library(prism_updater_logic STATIC ${PRISMUPDATER_SOURCES} ${TASKS_SOURCES} ${PRISMUPDATER_UI})
+    add_library(prism_updater_logic STATIC ${PRISMUPDATER_SOURCES} ${TASKS_SOURCES})
     target_include_directories(prism_updater_logic PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     if(${Launcher_USE_PCH})
@@ -1515,10 +1416,6 @@ endif()
 if(WIN32 OR (DEFINED Launcher_BUILD_FILELINKER AND Launcher_BUILD_FILELINKER))
     # File link
     add_library(filelink_logic STATIC ${LINKEXE_SOURCES})
-    set_project_warnings(filelink_logic
-    "${Launcher_MSVC_WARNINGS}"
-    "${Launcher_CLANG_WARNINGS}"
-    "${Launcher_GCC_WARNINGS}")
 
     target_include_directories(filelink_logic PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -1576,6 +1473,28 @@ if (UNIX AND APPLE AND Launcher_ENABLE_UPDATER)
     # It has to be copied here instead of just allowing fixup_bundle to install it, otherwise essential parts of
     # the framework aren't installed
     install(DIRECTORY ${MACOSX_SPARKLE_DIR}/Sparkle.framework DESTINATION ${FRAMEWORK_DEST_DIR} USE_SOURCE_PERMISSIONS)
+endif()
+
+# Set basic compiler warning/error flags for all targets
+get_property(Launcher_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+foreach(target ${Launcher_TARGETS})
+    message(STATUS "Enabling all warnings as errors for target '${target}'")
+    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        target_compile_options(${target} PRIVATE /W4 /WX /permissive-)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+endforeach()
+
+# Disable some warnings in main launcher target due to being present in a lot of places. TODO: Fix them.
+if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(Launcher_logic PRIVATE /wd4100) # C4100 - unused parameter
+    target_compile_options(${Launcher_Name} PRIVATE /wd4100) # C4100 - unused parameter
+else()
+    # sfinae-incomplete is a new GCC warning and triggers in Qt headers
+    # no-unknown-warning-option so that compilers that don't have sfinae-incomplete don't error
+    target_compile_options(Launcher_logic PRIVATE -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unknown-warning-option -Wno-sfinae-incomplete)
+    target_compile_options(${Launcher_Name} PRIVATE -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unknown-warning-option -Wno-sfinae-incomplete)
 endif()
 
 #### The bundle mess! ####

@@ -113,7 +113,7 @@ auto HttpMetaCache::resolveEntry(QString base, QString resource_path, QString ex
     if (file_last_changed != entry->m_local_changed_timestamp) {
         QFile input(real_path);
         if (!input.open(QIODevice::ReadOnly)) {
-            qWarning() << "Failed to open file '" << input.fileName() << "' for reading!";
+            qWarning() << "Failed to open file" << input.fileName() << "for reading:" << input.errorString();
             return staleEntry(base, resource_path);
         }
         QString md5sum = QCryptographicHash::hash(input.readAll(), QCryptographicHash::Md5).toHex().constData();
@@ -182,7 +182,7 @@ auto HttpMetaCache::evictAll() -> bool
         }
         map.entry_list.clear();
         // AND all return codes together so the result is true iff all runs of deletePath() are true
-        ret &= FS::deletePath(map.base_path);
+        ret &= FS::deleteContents(map.base_path);
     }
     return ret;
 }

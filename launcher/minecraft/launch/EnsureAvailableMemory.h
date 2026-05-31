@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
- *  PrismLauncher - Minecraft Launcher
- *  Copyright (C) 2022 Jan Drögehoff <sentrycraft123@gmail.com>
+ *  Prism Launcher - Minecraft Launcher
+ *  Copyright (C) 2026 Octol1ttle <l1ttleofficial@outlook.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,12 +18,19 @@
 
 #pragma once
 
-#include <QString>
-#include <QStringList>
+#include "launch/LaunchStep.h"
+#include "minecraft/MinecraftInstance.h"
 
-namespace MangoHud {
+class EnsureAvailableMemory : public LaunchStep {
+    Q_OBJECT
 
-QString getLibraryString();
+   public:
+    explicit EnsureAvailableMemory(LaunchTask* parent, MinecraftInstance* instance);
+    ~EnsureAvailableMemory() override = default;
 
-QString findLibrary(QString libName);
-}  // namespace MangoHud
+    void executeTask() override;
+    bool canAbort() const override { return false; }
+
+   private:
+    MinecraftInstance* m_instance;
+};

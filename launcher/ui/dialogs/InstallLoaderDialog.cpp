@@ -88,21 +88,25 @@ InstallLoaderDialog::InstallLoaderDialog(PackProfile* profile, const QString& ui
     : QDialog(parent), profile(profile), container(new PageContainer(this, QString(), this)), buttons(new QDialogButtonBox(this))
 {
     auto layout = new QVBoxLayout(this);
+    // small margins look ugly on macOS on modal windows
+    #ifndef Q_OS_MACOS
     layout->setContentsMargins(0, 0, 0, 0);
-
+    #endif
     container->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     layout->addWidget(container);
 
     auto buttonLayout = new QHBoxLayout(this);
+    // small margins look ugly on macOS on modal windows
+    #ifndef Q_OS_MACOS
     buttonLayout->setContentsMargins(0, 0, 6, 6);
-
+    #endif
     auto refreshButton = new QPushButton(tr("&Refresh"), this);
-    connect(refreshButton, &QPushButton::clicked, this, [this] { pageCast(container->selectedPage())->loadList(); });
+    connect(refreshButton, &QPushButton::clicked, this, [this] { pageCast(container->selectedPage())->loadList(true); });
     buttonLayout->addWidget(refreshButton);
 
     buttons->setOrientation(Qt::Horizontal);
     buttons->setStandardButtons(QDialogButtonBox::Cancel | QDialogButtonBox::Ok);
-    buttons->button(QDialogButtonBox::Ok)->setText(tr("Ok"));
+    buttons->button(QDialogButtonBox::Ok)->setText(tr("OK"));
     buttons->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);

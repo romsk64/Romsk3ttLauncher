@@ -48,6 +48,13 @@ Task::Task(bool show_debug) : m_show_debug(show_debug)
     setAutoDelete(false);
 }
 
+Task::~Task()
+{
+    if (isRunning()) {
+        qCWarning(taskLogC) << "Task" << describe() << "disposed while running!";
+    }
+}
+
 void Task::setStatus(const QString& new_status)
 {
     if (m_status != new_status) {
@@ -131,7 +138,7 @@ void Task::emitAborted()
         return;
     }
     m_state = State::AbortedByUser;
-    m_failReason = "Aborted.";
+    m_failReason = tr("Aborted");
     if (m_show_debug)
         qCDebug(taskLogC) << "Task" << describe() << "aborted.";
     emit aborted();
@@ -192,6 +199,22 @@ bool Task::wasSuccessful() const
 QString Task::failReason() const
 {
     return m_failReason;
+}
+
+void Task::propagateFromOther(Task* other)
+{
+    Q_ASSERT(other);
+    connect(other, &Task::status, this, &Task::setStatus);
+    connect(other, &Task::details, this, &Task::setDetails);
+    connect(other, &Task::progress, this, &Task::setProgress);
+    connect(other, &Task::stepProgress, this, &Task::propagateStepProgress);
+
+    setStatus(other->getStatus());
+    setDetails(other->getDetails());
+    setProgress(other->getProgress(), other->getTotalProgress());
+    for (const auto& progress : other->getStepProgress()) {
+        propagateStepProgress(*progress);
+    }
 }
 
 void Task::logWarning(const QString& line)

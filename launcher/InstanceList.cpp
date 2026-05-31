@@ -34,37 +34,32 @@
  *      limitations under the License.
  */
 
+#include "InstanceList.h"
+
 #include <QDebug>
-#include <QDir>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
-#include <QFileSystemWatcher>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMimeData>
-#include <QPair>
 #include <QSet>
 #include <QStack>
-#include <QTextStream>
-#include <QThread>
 #include <QTimer>
 #include <QUuid>
-#include <QXmlStreamReader>
 
 #include "BaseInstance.h"
 #include "ExponentialSeries.h"
 #include "FileSystem.h"
-#include "InstanceList.h"
+
 #include "InstanceTask.h"
 #include "NullInstance.h"
 #include "WatchLock.h"
 #include "minecraft/MinecraftInstance.h"
-#include "minecraft/ShortcutUtils.h"
 #include "settings/INISettingsObject.h"
 
 #ifdef Q_OS_WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 const static int GROUP_FILE_FORMAT_VERSION = 1;
@@ -153,13 +148,13 @@ QStringList InstanceList::getLinkedInstancesById(const QString& id) const
 int InstanceList::rowCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return m_instances.size();
+    return count();
 }
 
 QModelIndex InstanceList::index(int row, int column, const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    if (row < 0 || static_cast<std::size_t>(row) >= m_instances.size())
+    if (row < 0 || row >= count())
         return QModelIndex();
     return createIndex(row, column, m_instances.at(row).get());
 }
@@ -565,7 +560,7 @@ InstanceList::InstListError InstanceList::loadList()
 void InstanceList::updateTotalPlayTime()
 {
     totalPlayTime = 0;
-    for (auto const& itr : m_instances) {
+    for (const auto& itr : m_instances) {
         totalPlayTime += itr->totalTimePlayed();
     }
 }
@@ -579,7 +574,7 @@ void InstanceList::saveNow()
 
 void InstanceList::add(std::vector<std::unique_ptr<BaseInstance>>& t)
 {
-    beginInsertRows(QModelIndex(), m_instances.size(), m_instances.size() + t.size() - 1);
+    beginInsertRows(QModelIndex(), count(), static_cast<int>(count() + t.size() - 1));
     for (auto& ptr : t) {
         m_instances.push_back(std::move(ptr));
         connect(m_instances.back().get(), &BaseInstance::propertiesChanged, this, &InstanceList::propertiesChanged);
@@ -644,7 +639,7 @@ QModelIndex InstanceList::getInstanceIndexById(const QString& id) const
 
 int InstanceList::getInstIndex(BaseInstance* inst) const
 {
-    int count = m_instances.size();
+    int count = this->count();
     for (int i = 0; i < count; i++) {
         if (inst == m_instances.at(i).get()) {
             return i;
@@ -923,6 +918,7 @@ class InstanceStaging : public Task {
         connect(child, &Task::failed, this, &InstanceStaging::childFailed);
         connect(child, &Task::aborted, this, &InstanceStaging::childAborted);
         connect(child, &Task::abortStatusChanged, this, &InstanceStaging::setAbortable);
+        connect(child, &Task::abortButtonTextChanged, this, &InstanceStaging::setAbortButtonText);
         connect(child, &Task::status, this, &InstanceStaging::setStatus);
         connect(child, &Task::details, this, &InstanceStaging::setDetails);
         connect(child, &Task::progress, this, &InstanceStaging::setProgress);
@@ -930,22 +926,21 @@ class InstanceStaging : public Task {
         connect(&m_backoffTimer, &QTimer::timeout, this, &InstanceStaging::childSucceeded);
     }
 
-    virtual ~InstanceStaging() {}
+    ~InstanceStaging() override = default;
 
     // FIXME/TODO: add ability to abort during instance commit retries
     bool abort() override
     {
-        if (!canAbort())
+        if (!canAbort()) {
             return false;
+        }
 
-        m_child->abort();
-
-        return Task::abort();
+        return m_child->abort();
     }
     bool canAbort() const override { return (m_child && m_child->canAbort()); }
 
    protected:
-    virtual void executeTask() override
+    void executeTask() override
     {
         if (m_stagingPath.isNull()) {
             emitFailed(tr("Could not create staging folder"));
@@ -960,12 +955,14 @@ class InstanceStaging : public Task {
     void childSucceeded()
     {
         unsigned sleepTime = backoff();
-        if (m_parent->commitStagedInstance(m_stagingPath, *m_child.get(), m_child->group(), *m_child.get())) {
+        if (m_parent->commitStagedInstance(m_stagingPath, *m_child, m_child->group(), *m_child)) {
+            m_backoffTimer.stop();
             emitSucceeded();
             return;
         }
         // we actually failed, retry?
         if (sleepTime == maxBackoff) {
+            m_backoffTimer.stop();
             emitFailed(tr("Failed to commit instance, even after multiple retries. It is being blocked by something."));
             return;
         }
@@ -974,12 +971,14 @@ class InstanceStaging : public Task {
     }
     void childFailed(const QString& reason)
     {
+        m_backoffTimer.stop();
         m_parent->destroyStagingPath(m_stagingPath);
         emitFailed(reason);
     }
 
     void childAborted()
     {
+        m_backoffTimer.stop();
         m_parent->destroyStagingPath(m_stagingPath);
         emitAborted();
     }
@@ -1026,9 +1025,9 @@ QString InstanceList::getStagedInstancePath()
 }
 
 bool InstanceList::commitStagedInstance(const QString& path,
-                                        InstanceName const& instanceName,
+                                        const InstanceName& instanceName,
                                         QString groupName,
-                                        InstanceTask const& commiting)
+                                        const InstanceTask& commiting)
 {
     if (groupName.isEmpty() && !groupName.isNull())
         groupName = QString();

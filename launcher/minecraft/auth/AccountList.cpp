@@ -39,6 +39,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QIcon>
 #include <QIODevice>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -337,8 +338,6 @@ QVariant AccountList::data(const QModelIndex& index, int role) const
             switch (index.column()) {
                 case ProfileNameColumn:
                     return account->profileName();
-                case NameColumn:
-                    return account->accountDisplayString();
                 case TypeColumn: {
                     switch (account->accountType()) {
                         case AccountType::MSA: {
@@ -355,9 +354,6 @@ QVariant AccountList::data(const QModelIndex& index, int role) const
                 default:
                     return QVariant();
             }
-
-        case Qt::ToolTipRole:
-            return account->accountDisplayString();
 
         case PointerRole:
             return QVariant::fromValue(account);
@@ -379,8 +375,6 @@ QVariant AccountList::headerData(int section, [[maybe_unused]] Qt::Orientation o
             switch (section) {
                 case ProfileNameColumn:
                     return tr("Username");
-                case NameColumn:
-                    return tr("Account");
                 case TypeColumn:
                     return tr("Type");
                 case StatusColumn:
@@ -393,8 +387,6 @@ QVariant AccountList::headerData(int section, [[maybe_unused]] Qt::Orientation o
             switch (section) {
                 case ProfileNameColumn:
                     return tr("Minecraft username associated with the account.");
-                case NameColumn:
-                    return tr("User name of the account.");
                 case TypeColumn:
                     return tr("Type of the account (MSA or Offline)");
                 case StatusColumn:
@@ -458,7 +450,7 @@ bool AccountList::loadList()
     // Try to open the file and fail if we can't.
     // TODO: We should probably report this error to the user.
     if (!file.open(QIODevice::ReadOnly)) {
-        qCritical() << QString("Failed to read the account list file (%1).").arg(m_listFilePath).toUtf8();
+        qCritical() << QString("Failed to read the account list file %1 (%2).").arg(m_listFilePath).arg(file.errorString()).toUtf8();
         return false;
     }
 
@@ -575,7 +567,7 @@ bool AccountList::saveList()
     // Try to open the file and fail if we can't.
     // TODO: We should probably report this error to the user.
     if (!file.open(QIODevice::WriteOnly)) {
-        qCritical() << QString("Failed to read the account list file (%1).").arg(m_listFilePath).toUtf8();
+        qCritical() << QString("Failed to save the account list file %1 (%2).").arg(m_listFilePath).arg(file.errorString()).toUtf8();
         return false;
     }
 
@@ -586,7 +578,7 @@ bool AccountList::saveList()
         qDebug() << "Saved account list to" << m_listFilePath;
         return true;
     } else {
-        qDebug() << "Failed to save accounts to" << m_listFilePath;
+        qDebug() << "Failed to save accounts to" << m_listFilePath << "error:" << file.errorString();
         return false;
     }
 }
@@ -664,7 +656,7 @@ void AccountList::tryNext()
                     connect(m_currentTask.get(), &Task::succeeded, this, &AccountList::authSucceeded);
                     connect(m_currentTask.get(), &Task::failed, this, &AccountList::authFailed);
                     m_currentTask->start();
-                    qDebug() << "RefreshSchedule: Processing account" << account->accountDisplayString() << "with internal ID"
+                    qDebug() << "RefreshSchedule: Processing account" << account->profileName() << "with internal ID"
                              << accountId;
                     return;
                 }
